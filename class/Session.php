@@ -96,12 +96,13 @@ class Ethna_Session
         }
     }
 
+
     /**
      *  セッションを復帰する
      *
      *  @access public
      */
-    function restore()
+    public function restore()
     {
         if (!empty($_COOKIE[$this->session_name])
             || (ini_get("session.use_trans_sid") == 1
@@ -123,6 +124,17 @@ class Ethna_Session
                 $this->anonymous = true;
             }
         }
+    }
+
+    /**
+     *  セッションIDを取得する
+     *
+     *  @access public
+     *  @return string  session id
+     */
+    public function getId()
+    {
+        return session_id();
     }
 
     /**
