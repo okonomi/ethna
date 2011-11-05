@@ -25,6 +25,11 @@ class Ethna_Renderer_Smarty extends Ethna_Renderer
     /** @protected  engine path (library) */
     protected $engine_path = 'Smarty/Smarty.class.php';
 
+    protected $config_default = array(
+        'left_delimiter' => '{',
+        'right_delimiter' => '}',
+    );
+
     /**
      *  Ethna_Renderer_Smartyクラスのコンストラクタ
      *
@@ -35,9 +40,7 @@ class Ethna_Renderer_Smarty extends Ethna_Renderer
         parent::__construct($controller);
 
         // get renderer config
-        $smarty_config = isset($this->config['smarty'])
-            ? $this->config['smarty']
-            : array();
+        $smarty_config = $this->config;
 
         // load template engine
         $this->loadEngine($smarty_config);
@@ -45,7 +48,6 @@ class Ethna_Renderer_Smarty extends Ethna_Renderer
         $this->engine = new Smarty;
 
         // ディレクトリ関連は Controllerによって実行時に設定
-        // TODO: iniファイルによって上書き可にするかは要検討
         $template_dir = $controller->getTemplatedir();
         $compile_dir = $controller->getDirectory('template_c');
 
@@ -56,12 +58,8 @@ class Ethna_Renderer_Smarty extends Ethna_Renderer
         $this->engine->compile_id = md5($this->template_dir);
 
         // delimiter setting
-        if (array_key_exists('left_delimiter', $smarty_config)) {
-            $this->engine->left_delimiter = $smarty_config['left_delimiter'];
-        }
-        if (array_key_exists('right_delimiter', $smarty_config)) {
-            $this->engine->right_delimiter = $smarty_config['right_delimiter'];
-        }
+        $this->engine->left_delimiter = $smarty_config['left_delimiter'];
+        $this->engine->right_delimiter = $smarty_config['right_delimiter'];
 
         // コンパイルディレクトリは必須なので一応がんばってみる
         if (is_dir($this->engine->compile_dir) === false) {
@@ -72,6 +70,11 @@ class Ethna_Renderer_Smarty extends Ethna_Renderer
             $controller->getDirectory('plugins'),
             array(ETHNA_BASE . '/class/Plugin/Smarty', SMARTY_DIR . 'plugins')
         );
+    }
+
+    public function getName()
+    {
+        return 'smarty';
     }
 
     /**

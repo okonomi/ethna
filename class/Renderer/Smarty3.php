@@ -34,9 +34,7 @@ class Ethna_Renderer_Smarty3 extends Ethna_Renderer
         parent::__construct($controller);
 
         // get renderer config
-        $smarty_config = isset($this->config['smarty3'])
-            ? $this->config['smarty3']
-            : array();
+        $smarty_config = $this->config;
         $this->loadEngine($smarty_config);
 
         $this->engine = new Smarty();
@@ -48,26 +46,27 @@ class Ethna_Renderer_Smarty3 extends Ethna_Renderer
         $this->setTemplateDir($template_dir);
         $this->compile_dir = $compile_dir;
 
-        $this->engine->template_dir = $template_dir;
-        $this->engine->compile_dir = $compile_dir;
+        $this->engine->setTemplateDir($template_dir);
+        $this->engine->setCompileDir($compile_dir);
         $this->engine->compile_id = md5($this->template_dir);
 
-        if (isset($smarty_config['left_delimiter'])) {
-            $this->engine->left_delimiter = $smarty_config['left_delimiter'];
-        }
-        if (isset($smarty_config['right_delimiter'])) {
-            $this->engine->right_delimiter = $smarty_config['right_delimiter'];
-        }
+        $this->engine->left_delimiter = $smarty_config['left_delimiter'];
+        $this->engine->right_delimiter = $smarty_config['right_delimiter'];
 
         // make compile dir
-        if (is_dir($this->engine->compile_dir) === false) {
-            Ethna_Util::mkdir($this->engine->compile_dir, 0755);
+        if (is_dir($this->engine->getCompileDir()) === false) {
+            Ethna_Util::mkdir($this->engine->getCompileDir(), 0755);
         }
 
-        $this->engine->plugins_dir = array_merge(
+        $this->engine->setPluginsDir(array_merge(
             $controller->getDirectory('plugins'),
             array(ETHNA_BASE . '/class/Plugin/Smarty', SMARTY_DIR . 'plugins')
-        );
+        ));
+    }
+
+    public function getName()
+    {
+        return 'smarty3';
     }
 
     /**

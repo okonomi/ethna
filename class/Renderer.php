@@ -32,6 +32,9 @@ class Ethna_Renderer
     /** @protected    array   [appid]-ini.phpのレンダラ設定 */
     protected $config;
 
+    /** @protected    array   default configuration for the renderer */
+    protected $config_default = array();
+
     /** @protected    string  template directory  */
     protected $template_dir;
 
@@ -63,14 +66,45 @@ class Ethna_Renderer
     {
         $this->controller = $controller;
         $this->ctl = $this->controller;
-        $this->template_dir = null;
         $this->engine = null;
         $this->template = null;
         $this->prop = array();
         $this->plugin_registry = array();
+
+        $template_dir = $controller->getTemplatedir();
+        $this->template_dir = $template_dir;
+
+        // load configuration
         $config = $this->ctl->getConfig();
-        $this->config = $config->get('renderer');
+        $renderer_config = $config->get('renderer');
+        $this->config = $this->mergeConfig(
+            $this->config_default,
+            (isset($renderer_config[$this->getName()]) ? $renderer_config[$this->getName()] : array())
+        );
+
         $this->logger = $this->controller->getBackend()->getLogger();
+    }
+
+    /**
+     *  getName
+     *
+     *  @return string  renreder name
+     */
+    public function getName()
+    {
+        return 'ethna';
+    }
+
+    /**
+     * getConfig
+     *
+     * Get renderer configuration
+     *
+     * @return  array   renderer configuration
+     */
+    public function getConfig()
+    {
+        return $this->config;
     }
 
     /**
@@ -96,23 +130,24 @@ class Ethna_Renderer
             return Ethna::raiseWarning("template is not found: " . $this->template);
         }
 
+        extract($this->prop);
         if ($capture === true) {
             ob_start();
-            include_once $this->template_dir . $this->template;
+            include $this->template_dir . $this->template;
             $captured = ob_get_contents();
             ob_end_clean();
             return $captured;
         } else {
-            include_once $this->template_dir . $this->template;
+            include $this->template_dir . $this->template;
             return true;
         }
     }
 
     /**
      *  テンプレートエンジンを取得する
-     * 
+     *
      *  @return object   Template Engine.
-     * 
+     *
      *  @access public
      */
     public function getEngine()
@@ -122,9 +157,9 @@ class Ethna_Renderer
 
     /**
      *  テンプレートディレクトリを取得する
-     * 
+     *
      *  @return string   Template Directory
-     * 
+     *
      *  @access public
      */
     public function getTemplateDir()
@@ -134,11 +169,11 @@ class Ethna_Renderer
 
     /**
      *  テンプレート変数を取得する
-     * 
+     *
      *  @param string $name  変数名
-     * 
+     *
      *  @return mixed    変数
-     * 
+     *
      *  @access public
      */
     public function getProp($name)
@@ -152,9 +187,9 @@ class Ethna_Renderer
 
     /**
      *  テンプレート変数を削除する
-     * 
+     *
      *  @param name    変数名
-     * 
+     *
      *  @access public
      */
     public function removeProp($name)
@@ -166,9 +201,9 @@ class Ethna_Renderer
 
     /**
      *  テンプレート変数に配列を割り当てる
-     * 
+     *
      *  @param array $array
-     * 
+     *
      *  @access public
      */
     public function setPropArray($array)
@@ -178,9 +213,9 @@ class Ethna_Renderer
 
     /**
      *  テンプレート変数に配列を参照として割り当てる
-     * 
+     *
      *  @param array $array
-     * 
+     *
      *  @access public
      */
     public function setPropArrayByRef(&$array)
@@ -195,10 +230,10 @@ class Ethna_Renderer
 
     /**
      * テンプレート変数を割り当てる
-     * 
+     *
      * @param string $name 変数名
      * @param mixed $value 値
-     * 
+     *
      * @access public
      */
     public function setProp($name, $value)
@@ -208,10 +243,10 @@ class Ethna_Renderer
 
     /**
      *  テンプレート変数に参照を割り当てる
-     * 
+     *
      *  @param string $name 変数名
      *  @param mixed $value 値
-     * 
+     *
      *  @access public
      */
     public function setPropByRef($name, &$value)
@@ -221,9 +256,9 @@ class Ethna_Renderer
 
     /**
      *  テンプレートを割り当てる
-     * 
+     *
      *  @param string $template テンプレート名
-     * 
+     *
      *  @access public
      */
     public function setTemplate($template)
@@ -232,10 +267,20 @@ class Ethna_Renderer
     }
 
     /**
+     *  Get template name
+     *
+     *  @return string  template name
+     */
+    public function getTemplate()
+    {
+        return $this->template;
+    }
+
+    /**
      *  テンプレートディレクトリを割り当てる
-     * 
+     *
      *  @param string $dir ディレクトリ名
-     * 
+     *
      *  @access public
      */
     public function setTemplateDir($dir)
@@ -246,12 +291,12 @@ class Ethna_Renderer
             $this->template_dir .= '/';
         }
     }
-    
+
     /**
      *  テンプレートの有無をチェックする
-     * 
+     *
      *  @param string $template テンプレート名
-     * 
+     *
      *  @access public
      */
     public function templateExists($template)
@@ -265,11 +310,11 @@ class Ethna_Renderer
 
     /**
      *  プラグインをセットする
-     * 
+     *
      *  @param string $name　プラグイン名
      *  @param string $type プラグインタイプ
      *  @param string $plugin プラグイン本体
-     * 
+     *
      *  @access public
      */
     public function setPlugin($name, $type, $plugin)
@@ -312,8 +357,9 @@ class Ethna_Renderer
 
     // {{{ loadEngine
     /**
-     *  ビューを出力する
+     *  Load renderer engine class.
      *
+     *  @param  array   $config     render config array. (i.e. config.renderer.renderer_name)
      *  @access public
      */
     protected function loadEngine(array $config)
@@ -332,5 +378,18 @@ class Ethna_Renderer
         }
     }
     // }}}
+
+    /**
+     *  mergeConfig
+     *
+     *  Merge renderer configuration default and user config.
+     */
+    public function mergeConfig(array $config_default, array $user_config)
+    {
+        return array_merge(
+            $config_default,
+            $user_config
+        );
+    }
 }
 // }}}
